@@ -2,57 +2,43 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"sort"
 	"strings"
 )
 
-func main() {
+func server(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusOK)
+	str := "Demo Demo Test test, demo string for this code to check the frequency of top ten words.."
 
-	http.HandleFunc("/Hello", func(res http.ResponseWriter, req *http.Request) {
+	count := make(map[string]int)
 
-		fileName := "file.txt"
+	for _, word := range strings.Fields(str) {
+		count[word]++
+	}
 
-		file, err := ioutil.ReadFile(fileName)
+	words := make([]string, 0, len(count))
+	for i := range count {
+		words = append(words, i)
+	}
 
-		if err != nil {
-
-			log.Fatal(err)
-		}
-		// convert byteslice to string
-		text := string(file)
-		words := strings.Fields(text)
-
-		// count same words
-		m := make(map[string]int)
-		for _, word := range words {
-			m[word]++
-		}
-
-		// create and fill slice of word-count pairs for sorting by count
-		wordCounts := make([]string, len(m))
-		for key := range m {
-			wordCounts = append(wordCounts, key)
-		}
-
-		// sort wordCount slice
-		sort.Slice(wordCounts, func(i, j int) bool {
-			return m[wordCounts[i]] > m[wordCounts[j]]
-		})
-
-		// get the ten most frequent words
-		n := make(map[string]int)
-		for index, key := range wordCounts {
-			n[key] = m[key]
-			fmt.Fprintf(res, "%s %d\n", key, n[key])
-			if index == 9 {
-				break
-			}
-		}
+	sort.Slice(words, func(i, j int) bool {
+		return count[words[i]] > count[words[j]]
 	})
 
-	log.Fatal(http.ListenAndServe(":5100", nil))
+	for i := 0; i < 10 && i != len(words); i++ {
+		fmt.Fprintf(res, "Word  %s            count:%d\n", words[i], count[words[i]])
 
+	}
+	io.WriteString(res, "Success")
+
+}
+func main() {
+	http.HandleFunc("/", server)
+	err := http.ListenAndServe(":8008", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
